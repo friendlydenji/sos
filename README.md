@@ -1,5 +1,11 @@
 # Learn comprehensive linux with Beaglebone Black (hardware branch)
 
+## Documents
+- [The Linux Kernel Module Programming Guide (Peter Jay Salzman, Michael Burian, Ori Pomerantz, Bob Mottram, Jim Huang
+)](https://sysprog21.github.io/lkmpg/)
+- Linux System Programming (Robert Love)
+- 
+
 ## Project tree
 ### [Basice LKMPG](basic/README.md)
 - [x] b0: [Simple driver](basic/b0/README.md)
