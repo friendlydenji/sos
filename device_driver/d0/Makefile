@@ -1,4 +1,4 @@
-obj-m:=gpio_legacy.o
+obj-m:=gpio_legacy.o gpio_desc.o
 
 all:
 	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules

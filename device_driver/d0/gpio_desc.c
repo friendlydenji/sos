@@ -12,17 +12,69 @@
 #include <linux/printk.h>
 #include <linux/uaccess.h>
 #include <linux/moduleparam.h>
+#include <linux/gpio/machine.h>
 
 #include <asm/errno.h>
 
-static struct device device;
-static struct device_node *device_node;
-static struct gpio_desc *led;
+#define DEVICE_NUM              4
+#define DEVICE_NAME_PREFIX      "user_leds"
 
-static void 
+static struct gpio_desc *led[DEVICE_NUM];
+
+static int major = 0;
+static int minor = 0;
+static dev_t devno;
+static struct cdev cdev;
+static struct class *class;
+static struct device *device[DEVICE_NUM];
+
+static struct gpiod_lookup_table leds_gpio_table_0 = {
+    .dev_id = "user_leds_0",
+    .table = {
+        GPIO_LOOKUP("gpiochip1", 21, "user_led", GPIO_ACTIVE_HIGH),
+        { }
+    },
+};
+
+static struct gpiod_lookup_table leds_gpio_table_1 = {
+    .dev_id = "user_leds_1",
+    .table = {
+        GPIO_LOOKUP("gpiochip1", 22, "user_led", GPIO_ACTIVE_HIGH),
+        { }
+    },
+};
+
+static struct gpiod_lookup_table leds_gpio_table_2 = {
+    .dev_id = "user_leds_2",
+    .table = {
+        GPIO_LOOKUP("gpiochip1", 23, "user_led", GPIO_ACTIVE_HIGH),
+        { }
+    },
+};
+
+static struct gpiod_lookup_table leds_gpio_table_3 = {
+    .dev_id = "user_leds_3",
+    .table = {
+        GPIO_LOOKUP("gpiochip1", 24, "user_led", GPIO_ACTIVE_HIGH),
+        { }
+    },
+};
+
+static struct gpiod_lookup_table *leds_gpio_table[DEVICE_NUM] = {
+    &leds_gpio_table_0,
+    &leds_gpio_table_1,
+    &leds_gpio_table_2,
+    &leds_gpio_table_3,
+};
 
 static int device_open(struct inode *inode, struct file *filp) 
 {
+    int led_index = iminor(inode) - minor;   
+
+    if (led_index < 0 || led_index >= DEVICE_NUM)
+        return -ENODEV;
+
+    filp->private_data = (void *)(uintptr_t)led_index;  
     return 0;
 }
 
@@ -33,66 +85,45 @@ static int device_release(struct inode *inode, struct file *filp)
 
 static ssize_t device_read(struct file *filp, char __user *buffer, size_t length, loff_t *offset)
 {
-    device_buffer_size = min(BUF_LEN, length);
+    int led_index = (uintptr_t)filp->private_data;
 
-    if (*offset < 0) {
+    if (length == 0)
+        return 0;
+    if (length < 1)
+        return -EINVAL;
+
+    char value = (char)gpiod_get_value(led[led_index]) + 48;
+
+    if (copy_to_user(buffer, &value, 1)) {
         return -EINVAL;
     }
 
-    if (*offset > device_buffer_size) {
-        *offset = 0;
-    }
-
-    if (copy_to_user(buffer, control_signal, device_buffer_size)) {
-        return -EINVAL;
-    }
-
-    *offset += device_buffer_size;
-
-    return device_buffer_size;
-
+    return length;
 }
 
 static ssize_t device_write(struct file *filp, const char __user *buffer, size_t length, loff_t *offset)
 {
-    device_buffer_size = min(BUF_LEN, length);
+    int led_index = (uintptr_t)filp->private_data;
 
-    if (*offset < 0) {
+    char value;
+
+    if (length == 0) {
+        return 0;
+    }
+
+    if (length < 1) {
         return -EINVAL;
     }
 
-    if (*offset > device_buffer_size) {
-        *offset = 0;
-    }
+    if (copy_from_user(&value, buffer, 1))
+        return -EFAULT;
 
-    if (copy_from_user(control_signal, buffer, device_buffer_size)) {
+    if (value != '0' && value != '1')
         return -EINVAL;
-    }
 
-    switch (control_signal[0]) {
-        case '0':
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 10, 0)
-        gpio_set_value(led_gpio, 0);
-#else
-        gpio_set_value(leds[0].gpio, 0);
-#endif /* LINUX_VERSION_CODE */
-            pr_info("LED off\n");
-            break;
-        case '1':
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 10, 0)
-        gpio_set_value(led_gpio, 1);
-#else
-        gpio_set_value(leds[0].gpio, 1);
-#endif /* LINUX_VERSION_CODE */
-            pr_info("LED on\n");
-            break;
-        default:
-            pr_warn("Invalid signal\n");
-    }
+    gpiod_set_value(led[led_index], value == '1');
 
-    *offset += device_buffer_size;
-
-    return device_buffer_size;
+    return length;
 }
 
 static struct file_operations fops = {
@@ -109,119 +140,112 @@ static int __init device_init(void)
 {
     int retval = 0;
 
-    if (led_device.major) {
-        led_device.devno = MKDEV(led_device.major, led_device.minor);
-        retval = register_chrdev_region(led_device.devno, DEVICE_NUM, DEVICE_NAME);
+    if (major) {
+        devno = MKDEV(major, minor);
+        retval = register_chrdev_region(devno, DEVICE_NUM, DEVICE_NAME_PREFIX);
         if (retval) {
             pr_err("device_init: register_chrdev_region failed %d\n", retval);
             goto err_out;
         }
     }
     else {
-        retval = alloc_chrdev_region(&led_device.devno, led_device.minor, DEVICE_NUM, DEVICE_NAME);
+        retval = alloc_chrdev_region(&devno, minor, DEVICE_NUM, DEVICE_NAME_PREFIX);
         if (retval) {
             pr_err("device_init: alloc_chrdev_region failed %d\n", retval);
             goto err_out;
         }
-        led_device.major = MAJOR(led_device.devno);
+        major = MAJOR(devno);
     }
-    pr_info("device_init: device registered with major %d, minor %d\n", led_device.major, led_device.minor);
+    pr_info("device_init: device registered with major %d, minor %d\n", major, minor);
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(6, 4, 0)
-    led_device.cdev.owner = THIS_MODULE;
+    cdev.owner = THIS_MODULE;
 #endif
 
-    cdev_init(&led_device.cdev, &fops);
-    retval = cdev_add(&led_device.cdev, led_device.devno, DEVICE_NUM);
+    cdev_init(&cdev, &fops);
+    retval = cdev_add(&cdev, devno, DEVICE_NUM);
     if (retval) {
         pr_err("device_init: cdev_add failed %d\n", retval);
         goto err_unregister_chardev_region;
     }
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 4, 0)
-    led_device.class = class_create(DEVICE_NAME);
+    class = class_create(DEVICE_NAME_PREFIX);
 #else
-    led_device.class = class_create(THIS_MODULE, DEVICE_NAME);
+    class = class_create(THIS_MODULE, DEVICE_NAME_PREFIX);
 #endif
-    if (IS_ERR(led_device.class)) {
-        retval = PTR_ERR(led_device.class);
+    if (IS_ERR(class)) {
+        retval = PTR_ERR(class);
         pr_err("device_init: class_create failed %d\n", retval);
         goto err_cdev_del;
     }
 
     int i = 0;
     for (i = 0; i < DEVICE_NUM; ++ i) {
-        char device_name[11];
+        char device_name[12];
         sprintf(device_name, "%s%c", DEVICE_NAME_PREFIX, (char)i + '0');
-        led_device.device[i] = device_create(led_device.class, NULL, led_device.devno, NULL, device_name);
-        if (IS_ERR(led_device.device[i])) {
-            retval = PTR_ERR(led_device.device[i]);
+        device[i] = device_create(class, NULL, MKDEV(major, minor + i), NULL, device_name);
+        if (IS_ERR(device[i])) {
+            retval = PTR_ERR(device[i]);
             pr_err("device_init: device_create %d failed %d\n", i, retval);
             goto err_device_destroy;
         }
     }
 
-    pr_info("device_init: device created at /dev/%s\n", DEVICE_NAME);
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 10, 0)
-    retval = gpio_request(led_gpio, led_label);
-#else
-    retval = gpio_request(leds[0].gpio, leds[0].label);
-#endif
-    if (retval) {
-        pr_err("device_init: gpio_request failed %d\n", retval);
-        goto err_device_destroy;
+    pr_info("device_init: device created at /dev/%s\n", DEVICE_NAME_PREFIX);
+    for (i = 0; i < DEVICE_NUM; ++ i) {
+        gpiod_add_lookup_table(leds_gpio_table[i]);
     }
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 10, 0)
-    retval = gpio_direction_output(led_gpio, led_flags);
-#else
-    retval = gpio_direction_output(leds[0].gpio, leds[0].flags);
-#endif
-
-    if (retval) {
-        pr_err("device_init: gpio_direction_output failed %d\n", retval);
-        goto err_gpio_free;
+    
+    for (i = 0; i < DEVICE_NUM; ++ i) {
+        // char device_name[12];
+        // sprintf(device_name, "%s%c", DEVICE_NAME_PREFIX, (char)i + '0');
+        led[i] = gpiod_get(device[i], "user_led", GPIOD_OUT_LOW);
+        if (IS_ERR(led[i])) {
+            retval = PTR_ERR(led[i]);
+            pr_err("device_init: gpiod_get %d failed %d\n", i, retval);
+            goto err_gpio_put;
+        }
     }
-
+    
     return 0;
 
-err_gpio_free:
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 10, 0)
-    gpio_free(led_gpio);
-#else
-    gpio_free(leds[0].gpio);
-#endif
-err_device_destroy:
-    for (; i >=0 ; -- i) {
-        device_destroy(led_device.class, led_device.devno + i);
+err_gpio_put:
+    for (--i ; i >= 0; -- i) {
+	    gpiod_put(led[i]);
     }
-err_class_destroy:
-    class_destroy(led_device.class);
+    for (i = 0; i < DEVICE_NUM; ++ i) {
+        gpiod_remove_lookup_table(leds_gpio_table[i]);
+    }
+err_device_destroy:
+    for (-- i; i >=0 ; -- i) {
+        device_destroy(class, devno + i);
+    }
+    class_destroy(class);
 err_cdev_del:
-    cdev_del(&led_device.cdev);
+    cdev_del(&cdev);
 err_unregister_chardev_region:
-    unregister_chrdev_region(led_device.devno, DEVICE_NUM);
+    unregister_chrdev_region(devno, DEVICE_NUM);
 err_out:
     return retval;
 }
 
 static void __exit device_exit(void)
 {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 10, 0)
-    gpio_set_value(led_gpio, 0);
-    gpio_free(led_gpio);
-#else
-    gpio_set_value(leds[0].gpio, 0);
-    gpio_free(leds[0].gpio);
-#endif
     int i;
+
     for (i = 0; i < DEVICE_NUM; ++ i) {
-        device_destroy(led_device.class, led_device.devno + i);
+        gpiod_remove_lookup_table(leds_gpio_table[i]);
     }
-    class_destroy(led_device.class);
-    cdev_del(&led_device.cdev);
-    unregister_chrdev_region(led_device.devno, DEVICE_NUM);
+
+    for (i = 0; i < DEVICE_NUM; ++ i) {
+        gpiod_set_value(led[i], 0);
+        gpiod_put(led[i]);
+        device_destroy(class, devno + i);
+    }
+    class_destroy(class);
+    cdev_del(&cdev);
+    unregister_chrdev_region(devno, DEVICE_NUM);
 
     pr_info("device_exit: device removed\n");
 }
