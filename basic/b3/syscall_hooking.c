@@ -233,6 +233,6 @@ static void __exit syscall_hooking_exit(void)
 module_init(syscall_hooking_init);
 module_exit(syscall_hooking_exit);
 
-MODULE_AUTHOR("godminhtri");
+MODULE_AUTHOR("friendlydenji");
 MODULE_DESCRIPTION("put a hooking on the syscall open");
 MODULE_LICENSE("GPL");

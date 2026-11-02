@@ -253,6 +253,6 @@ static void __exit device_exit(void)
 module_init(device_init);
 module_exit(device_exit);
 
-MODULE_AUTHOR("godminhtri");
-MODULE_DESCRIPTION("gpio device driver");
+MODULE_AUTHOR("friendlydenji");
+MODULE_DESCRIPTION("modern but stupid gpio device driver");
 MODULE_LICENSE("GPL");

@@ -50,6 +50,6 @@ static void __exit sysfs_file_exit(void)
 module_init(sysfs_file_init);
 module_exit(sysfs_file_exit);
 
-MODULE_AUTHOR("godminhtri");
+MODULE_AUTHOR("friendlydenji");
 MODULE_DESCRIPTION("sysfs module shell");
 MODULE_LICENSE("GPL");

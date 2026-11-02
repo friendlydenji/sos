@@ -2,7 +2,7 @@
 #include <linux/init.h>
 #include <linux/module.h>
 
-MODULE_AUTHOR("godminhtri");
+MODULE_AUTHOR("friendlydenji");
 MODULE_DESCRIPTION("first module");
 MODULE_LICENSE("GPL");
 

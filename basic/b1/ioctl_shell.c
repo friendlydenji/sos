@@ -179,6 +179,6 @@ static void __exit ioctl_shell_exit(void)
 module_init(ioctl_shell_init);
 module_exit(ioctl_shell_exit);
 
-MODULE_AUTHOR("godminhtri");
+MODULE_AUTHOR("friendlydenji");
 MODULE_DESCRIPTION("ioctl shell");
 MODULE_LICENSE("GPL");

@@ -295,6 +295,6 @@ static ssize_t normal_device_write(struct file *file, const char *buffer, size_t
 module_init(normal_device_register);
 module_exit(normal_device_unregister);
 
-MODULE_AUTHOR("godminhtri");
+MODULE_AUTHOR("friendlydenji");
 MODULE_DESCRIPTION("normal driver");
 MODULE_LICENSE("GPL");

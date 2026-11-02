@@ -92,6 +92,6 @@ static void __exit debugfs_shell_exit(void)
 module_init(debugfs_shell_init);
 module_exit(debugfs_shell_exit);
 
-MODULE_AUTHOR("godminhtri");
+MODULE_AUTHOR("friendlydenji");
 MODULE_DESCRIPTION("debugfs shell");
 MODULE_LICENSE("GPL");

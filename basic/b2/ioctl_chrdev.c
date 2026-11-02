@@ -246,6 +246,6 @@ static void __exit ioctl_chrdev_exit(void)
 module_init(ioctl_chrdev_init);
 module_exit(ioctl_chrdev_exit);
 
-MODULE_AUTHOR("godminhtri");
+MODULE_AUTHOR("friendlydenji");
 MODULE_DESCRIPTION("ioctl shell");
 MODULE_LICENSE("GPL");

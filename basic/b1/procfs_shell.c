@@ -94,7 +94,7 @@ static void __exit procfs_file_exit(void)
 module_init(procfs_file_init);
 module_exit(procfs_file_exit);
 
-MODULE_AUTHOR("godminhtri");
+MODULE_AUTHOR("friendlydenji");
 MODULE_DESCRIPTION("procfs file shell");
 MODULE_LICENSE("GPL");
 
