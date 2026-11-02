@@ -1,0 +1,24 @@
+/dts-v1/;
+/plugin/;
+
+/ {
+    compatible = "ti,beaglebone", "ti,beaglebone-black";
+
+    fragment@0 {
+        target-path = "/leds";
+        __overlay__ {
+            status = "disabled";
+        };
+    };
+    fragment@1 {
+        target-path = "/";
+        __overlay__ {
+            user_leds {
+                compatible = "user-leds";
+                pinctrl-names = "default";
+                pinctrl-0 = <&user_leds_s0>;
+                led-gpios = <&gpio1 21 0>, <&gpio1 22 0>, <&gpio1 23 0>, <&gpio1 24 0>;
+            };
+        };
+    };
+};

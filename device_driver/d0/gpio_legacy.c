@@ -24,7 +24,7 @@
 
 static int base_gpio = BUILTIN_LED_GPIO;
 module_param(base_gpio, uint, 0644);
-static char control_signal[BUF_LEN];
+static char control_signal[BUF_LEN] = "0\n";
 static unsigned long device_buffer_size = 0;
 
 struct LED_dev {
@@ -41,7 +41,7 @@ static struct LED_dev led_device;
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 10, 0)
 static unsigned int led_gpio[DEVICE_NUM];
 static unsigned int led_flags[DEVICE_NUM];
-static const char led_label[DEVICE_NUM][12];
+static char led_label[DEVICE_NUM][12];
 #else
 static struct gpio leds[DEVICE_NUM];
 #endif /* LINUX_VERSION_CODE */
@@ -75,13 +75,9 @@ static ssize_t device_read(struct file *filp, char __user *buffer, size_t length
 {
     device_buffer_size = min(BUF_LEN, length);
 
-    if (*offset < 0) {
-        return -EINVAL;
-    }
-
-    if (*offset > device_buffer_size) {
-        *offset = 0;
-    }
+    if (length == 0 || *offset > 0) {
+        return 0;     
+    }                 
 
     if (copy_to_user(buffer, control_signal, device_buffer_size)) {
         return -EINVAL;
@@ -114,11 +110,11 @@ static ssize_t device_write(struct file *filp, const char __user *buffer, size_t
     switch (control_signal[0]) {
         case '0':
             gpio_set_value(led_gpio_num(led_index), 0);
-            pr_info("LED %d on\n", led_index);
+            pr_info("LED %d OFF\n", led_index);
             break;
         case '1':
             gpio_set_value(led_gpio_num(led_index), 1);
-            pr_info("LED %d off\n", led_index);
+            pr_info("LED %d ON\n", led_index);
             break;
         default:
             pr_warn("Invalid signal\n");
@@ -186,13 +182,11 @@ static int __init device_init(void)
     int i = 0;
     for (i = 0; i < DEVICE_NUM; ++ i) {
         char device_name[12];
-        char label_name[12];
         sprintf(device_name, "%s%c", DEVICE_NAME_PREFIX, (char)i + '0');
-        sprintf(label_name, "%s%c", LED_LABEL_PREFIX, (char)i + '0');
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 10, 0)
         led_gpio[i] = base_gpio + i;
         led_flags[i] = LED_FLAGS;
-        strcpy(led_label[i], label_name);
+        snprintf(led_label[i], sizeof(led_label[i]), "%s%c", LED_LABEL_PREFIX, (char)i + '0');
 #else
         leds[i] = (struct gpio){base_gpio + i, LED_FLAGS, device_name};
 #endif
@@ -204,7 +198,7 @@ static int __init device_init(void)
         }
     }
 
-    pr_info("device_init: device created at /dev/%s\n", DEVICE_NAME_PREFIX);
+    pr_info("device_init: device created at /dev/%s*\n", DEVICE_NAME_PREFIX);
 
     for (i = 0; i < DEVICE_NUM; ++ i) {
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 10, 0)
