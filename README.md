@@ -27,9 +27,18 @@ This is the nth time I've restarted the Beaglebone Black embedded Linux study an
 - Currently, we will focus on 3 aspects of Linux programming including: Linux kernel module, Linux system programming and device driver.
 - For Linux kernel module and Linux system programming, we can both test them on Beaglebone Black or QEMU.
 - For device driver, we will test on the real hardware bbb for sure.
-  
+
+## Documents
+- [The Linux Kernel Module Programming Guide (Peter Jay Salzman, Michael Burian, Ori Pomerantz, Bob Mottram, Jim Huang
+)](https://sysprog21.github.io/lkmpg/)
+- Linux System Programming (Robert Love)
+<!-- - [Linux Kernel Teaching](https://linux-kernel-labs.github.io/) -->
+<!-- - Mastering Embedded Linux Development 4th (Frank Vasquez, Chris Simmonds) -->
+<!-- - Linux Device Driver 3rd (Jonathan Corbet, Alessandro Rubini, Greg Kroah-Hartman) -->
+
 ## Progress
-- At this time, we have 3 main branches that ***bbb*** for test on the hardware, ***qemux86*** for test on qemu and ***debug*** for adding trace information for the test.
+- At this time, we have 3 main branches that ***main*** (this branch) for introducing, ***bbb*** for test on the hardware and ***qemux86*** for test on qemu.
+- Some random module will have debug version for debugging.
 
 ### Basic LKMPG
 - [x] b0: Simple driver 
@@ -43,13 +52,17 @@ This is the nth time I've restarted the Beaglebone Black embedded Linux study an
 - [ ] d2: USB driver
 - [ ] d3: PCI Ethernet driver
 - [ ] d4: USB Ethernet driver
+- [ ] d5: Block device
 
 ### LKMPG & System programming
+- [ ] s0: Buffered I/O 
 - [ ] s1: Multiplexed I/O 
-- [ ] s2: Scatter/gather I/O 
-- [ ] s3: Advice 
-- [ ] s4: Asynchronous I/O 
-- [ ] s5: Optimize for block device I/O 
-- [ ] s6: Daemon 
-- [ ] s7: Scheduling 
+- [ ] s2: Asynchronous I/O 
+- [ ] s3: Scatter/gather I/O 
+- [ ] s4: Advise mechanism
+- [ ] s5: Daemon 
+- [ ] s6: Scheduling 
+- [ ] s7: Cooperation 
+- [ ] s8: Real-time 
+- [ ] s9: Coroutine 
 
